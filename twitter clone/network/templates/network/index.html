@@ -1,0 +1,138 @@
+{% extends "network/layout.html" %}
+
+{% block body %}
+    <script>
+
+        function getCookie(name){
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length == 2) {
+                return parts.pop().split(';').shift();
+            }
+        }
+
+        function saveChanges(id){
+            const text = document.getElementById(`textarea_${id}`).value
+            const content = document.getElementById(`content_${id}`)
+            const modal = document.getElementById(`modal_edit_post_${id}`)
+            fetch(`/editPost/${id}`, {
+                method: "POST",
+                headers: {"Content-type": "application/json", "X-CSRFToken": getCookie("csrftoken")},
+                body: JSON.stringify({
+                    content: text
+                })
+            }) 
+            .then(response => response.json())
+            .then(result => {
+                content.innerHTML = result.data;
+                
+                modal.classList.remove('show');
+                modal.setAttribute('aria-hidden', 'true');
+                modal.setAttribute('style', 'display: none');
+
+                // get modal backdrops
+                const modalsBackdrops = document.getElementsByClassName('modal-backdrop');
+            
+                for(let i=0; i<modalsBackdrops.length; i++){
+                    document.body.removeChild(modalsBackdrops[i]);
+                }
+            })
+        }
+
+        function likeHandler(id, likedPosts) {
+            const btn = document.getElementById(`${id}`)
+            btn.classList.remove("fa-thumbs-up")
+            btn.classList.remove("fa-thumbs-down")
+
+            if (likedPosts.indexOf(id) > -1) {
+                var liked = true;
+            } else {
+                var liked = false;
+            }
+
+            if (liked === true) {
+                fetch(`/unlikePost/${id}`)
+                .then(response => console.log(response.json))
+                .then(result => {
+                    console.log(id)
+                    btn.classList.add("fa-thumbs-up");
+                })
+            } else {
+                fetch(`/likePost/${id}`)
+                .then(response => console.log(response.json))
+                .then(result => {
+                    console.log(result)
+                    btn.classList.add("fa-thumbs-down");
+                })
+            }
+            liked = !liked
+        }
+
+    </script>
+
+
+    <h1 class="my-3 mx-5">All Posts</h1>
+        {% if user.is_authenticated %}
+        <div class="border rounded my-3 mx-5">
+            <h4 class = "my-3 mx-4">New Post</h4> 
+            <form class = "my-3 mx-4" action="{% url 'newPost' %}" method="POST">
+                {% csrf_token %}
+                <textarea class="form-control" name="content" row="4" cols="100"></textarea>
+                </br>
+                <input type="submit" value="Post" class="btn btn-primary">
+            </form>
+        </div>
+        {% endif %}
+        {% for post in allPosts %}
+            <div class="border rounded my-3 mx-5"> 
+                <div class="row">
+                    <h5 class = "my-3 mx-4"><a href="{% url 'profilePage' user_id=post.postUser.id %}">@{{ post.postUser }}</a></h5>
+                    {% if user.is_authenticated %}
+                        {% if user == post.postUser %}
+                            <button class = "my-2 mx-4 btn btn-primary" data-toggle="modal" data-target="#modal_edit_post_{{ post.id }}">Edit</button>
+                            <div class="modal fade" id="modal_edit_post_{{ post.id }}" tabindex="-1" role="dialog" aria-labelledby="modal_edit_post_{{ post.id }}_label" aria-hidden="true">
+                                <div class="modal-dialog">
+                                  <div class="modal-content">
+                                    <div class="modal-header">
+                                      <h5 class="modal-title">Edit Content</h5>
+                                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <textarea class="form-control" id="textarea_{{ post.id }}" rows="3">{{ post.postContent }}</textarea>
+                                    </div>
+                                    <div class="modal-footer">
+                                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                      <button type="button" class="btn btn-primary" onclick="saveChanges({{post.id}})">Save changes</button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                        {% endif %}
+                    {% endif%}
+                </div>
+                
+                <h6 class = "my-3 mx-4" id="content_{{ post.id }}"> {{ post.postContent }} </h6>
+                <p class = "my-3 mx-4 blockquote-footer"> {{ post.postDate }} </p>
+                <div class = "my-3 mx-4">
+                    {% if post.postUser != user %}
+                        {% if post.id in likedPosts %}
+                            <button onclick="likeHandler({{ post.id }}, {{ likedPosts }})" class="fa fa-thumbs-down" id="{{ post.id }}"></button>
+                        {% else %}
+                            <button onclick="likeHandler({{ post.id }}, {{ likedPosts }})" class="fa fa-thumbs-up" id="{{ post.id }}"></button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+
+        <nav aria-label="Page navigation example" class="my-3 mx-5">
+            <ul class="pagination">
+            {% if allPosts.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ allPosts.previous_page_number}}">Previous</a></li>
+            {% endif %}
+            {% if allPosts.has_next %}
+              <li class="page-item"><a class="page-link" href="?page={{ allPosts.next_page_number}}">Next</a></li>
+            {% endif %}
+            </ul>
+          </nav>
+{% endblock %}

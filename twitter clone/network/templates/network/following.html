@@ -1,0 +1,24 @@
+{% extends "network/layout.html" %}
+
+{% block body %}
+    <h1 class="my-3 mx-5">Following Posts</h1>
+        
+        {% for post in allPosts %}
+            <div class="border rounded my-3 mx-5"> 
+                <h5 class = "my-3 mx-4"><a href="{% url 'profilePage' user_id=post.postUser.id %}">@{{ post.postUser }}</a></h5>
+                <h6 class = "my-3 mx-4"> {{ post.postContent }} </h6>
+                <p class = "my-3 mx-4 blockquote-footer"> {{ post.postDate }} </p>
+            </div>
+        {% endfor %}
+
+        <nav aria-label="Page navigation example" class="my-3 mx-5">
+            <ul class="pagination">
+            {% if allPosts.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ allPosts.previous_page_number}}">Previous</a></li>
+            {% endif %}
+            {% if allPosts.has_next %}
+              <li class="page-item"><a class="page-link" href="?page={{ allPosts.next_page_number}}">Next</a></li>
+            {% endif %}
+            </ul>
+          </nav>
+{% endblock %}
